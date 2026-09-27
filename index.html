@@ -145,6 +145,9 @@
   .audit-item .ai-action{font-size:12px;font-weight:600;}
   .audit-item .ai-time{font-size:10px;color:var(--ink-soft);margin-top:2px;}
   .empty-note{font-size:11px;color:var(--ink-soft);text-align:center;padding:20px 10px;}
+  .audit-row{display:flex;justify-content:space-between;align-items:center;background:var(--red-t14);border:1px solid var(--red-t22);border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:10.5px;gap:8px;flex-wrap:wrap;}
+  .audit-row .a-cmd{font-weight:700;color:var(--red-light);}
+  .audit-row .a-time{color:var(--red-light);opacity:.75;font-size:9.5px;flex-shrink:0;}
 
   /* TICKETS */
   .cat-row{display:flex;gap:7px;margin-bottom:14px;overflow-x:auto;}
@@ -314,6 +317,8 @@
         <button data-outil="scanticket" onclick="showOutil('scanticket')">Scan ticket</button>
         <button data-outil="presse" onclick="showOutil('presse')">Presse</button>
         <button data-outil="crypto" onclick="showOutil('crypto')">Hash/Chiffrement</button>
+        <button data-outil="droit" onclick="showOutil('droit')">Droit & Preuves</button>
+        <button data-outil="blockchain" onclick="showOutil('blockchain')">Blockchain</button>
       </div>
 
       <!-- ===== ABAFUSION / WEBHOOK ===== -->
@@ -327,7 +332,7 @@
           <input class="tool-input" id="abaProxyUrl" value="https://corsproxy.io/?url=">
           <div class="tool-note">Proxy public déjà en ligne, actif immédiatement. Pour ta propre URL fiable (recommandé pour de la production), déploie <code>webhook-proxy-worker.js</code> sur Cloudflare Workers (gratuit, 5 min) et remplace la valeur ci-dessus par <code>https://ton-worker.xxx.workers.dev/?url=</code> — garde bien le <code>?url=</code> à la fin.</div>
           <label class="tool-label">Charge utile (JSON, modifiable)</label>
-          <textarea class="tool-input" id="abaPayload">{"event":"test_safestade","source":"safestade-pro","timestamp":""}</textarea>
+          <textarea class="tool-input" id="abaPayload">{"stade":"Stade de Rabat","heure":"","numTicket":null,"description":"Test manuel depuis SafeStade","event":"test_safestade","source":"safestade-pro","timestamp":""}</textarea>
           <label class="tool-label"><input type="checkbox" id="abaAutoSync"> Synchronisation automatique à chaque ticket critique</label>
           <div class="btn-pair">
             <button class="tool-btn ghost" onclick="testWebhook()">Tester (GET)</button>
@@ -343,55 +348,63 @@
       <!-- ===== ESP32 ===== -->
       <div class="outil-panel" id="outil-esp">
         <div class="tool-card">
-          <div class="tool-head"><div class="tool-title">📟 ESP32 — USB uniquement</div><span class="led-dot" id="espLed"></span></div>
-          <div class="tool-sub">Connexion filaire USB directe (Web Serial) — 100% hors-ligne. Aucune IP, aucun Wi-Fi, aucun Bluetooth.</div>
-          <button class="tool-btn ghost" onclick="connectSerial()">🔌 Connecter via USB</button>
-
-          <label class="tool-label">Commande à envoyer</label>
-          <div class="chip-select">
-            <button class="mini-chip active" data-cmd="LED1_ON" onclick="setEspCmd('LED1_ON', this)">LED1 ON</button>
-            <button class="mini-chip" data-cmd="LED1_OFF" onclick="setEspCmd('LED1_OFF', this)">LED1 OFF</button>
-            <button class="mini-chip" data-cmd="LED2_ON" onclick="setEspCmd('LED2_ON', this)">LED2 ON</button>
-            <button class="mini-chip" data-cmd="LED2_OFF" onclick="setEspCmd('LED2_OFF', this)">LED2 OFF</button>
-            <button class="mini-chip" data-cmd="RELAY1_ON" onclick="setEspCmd('RELAY1_ON', this)">Relais1 ON</button>
-            <button class="mini-chip" data-cmd="RELAY1_OFF" onclick="setEspCmd('RELAY1_OFF', this)">Relais1 OFF</button>
-            <button class="mini-chip" data-cmd="RELAY2_ON" onclick="setEspCmd('RELAY2_ON', this)">Relais2 ON</button>
-            <button class="mini-chip" data-cmd="RELAY2_OFF" onclick="setEspCmd('RELAY2_OFF', this)">Relais2 OFF</button>
-            <button class="mini-chip" data-cmd="BUZZER" onclick="setEspCmd('BUZZER', this)">Bip court</button>
-          </div>
-          <button class="tool-btn primary" onclick="sendEspCommand()">Envoyer la commande</button>
-          <div class="btn-pair">
-            <button class="tool-btn primary" onclick="sendEspRawCommand('ALARM_ON')">🚨 Alarme forte</button>
-            <button class="tool-btn ghost" onclick="sendEspRawCommand('ALARM_OFF')">Arrêter</button>
-          </div>
-          <div class="status-line"><span>Mode alerte automatique</span><span class="state-pill" id="alertPill">OFF</span></div>
-          <div class="btn-pair">
-            <button class="tool-btn primary" onclick="sendEspRawCommand('ALERT_ON'); setAlertPill(true)">Activer</button>
-            <button class="tool-btn ghost" onclick="sendEspRawCommand('ALERT_OFF'); setAlertPill(false)">Désactiver</button>
-          </div>
-          <div class="tool-note">En mode alerte activé, le firmware ESP32 déclenche <b>lui-même</b> la LED rouge + l'alarme dès qu'un vrai passage est détecté par le capteur IR — sans intervention du téléphone.</div>
-
-          <label class="tool-label" style="margin-top:16px">📡 Capteur infrarouge (réel, via USB)</label>
-          <div class="btn-pair">
-            <button class="tool-btn ghost" onclick="readEspSensorSerial('GET_IR')">Lire le capteur IR réel</button>
-          </div>
-          <div class="status-line"><span>État IR</span><span class="state-pill" id="irPill">Inconnu</span></div>
-
-          <label class="tool-label">🌡️ Température (réelle, via USB)</label>
-          <button class="tool-btn ghost" onclick="readEspSensorSerial('GET_TEMP')">Lire la température (capteur réel)</button>
-          <div class="status-line"><span>Température</span><span class="state-pill" id="tempPill">—</span></div>
-
-          <label class="tool-label" style="margin-top:16px">⏱️ Minuterie (déclenche l'alarme à zéro)</label>
-          <div class="btn-pair">
-            <input class="tool-input" id="timerSeconds" type="number" value="15" style="flex:0 0 90px">
-            <button class="tool-btn primary" onclick="startEspTimer()">▶️ Démarrer</button>
-            <button class="tool-btn ghost" onclick="stopEspTimer()">⏹️ Arrêter</button>
-          </div>
-          <div class="status-line"><span>Minuterie</span><span class="state-pill" id="timerPill">INACTIVE</span></div>
-
-          <div class="status-line"><span>Connexion ESP32</span><span class="state-pill pending" id="espStatusPill">Déconnecté</span></div>
-          <div class="honest-note"><b>🔴 ESP32 sans Wi-Fi, USB uniquement :</b> cette carte ne se connecte à aucun réseau. Un appui sur le bouton BTN1 (à côté du logo Wi-Fi imprimé) envoie juste un signal par le câble USB — c'est le <u>téléphone</u>, avec sa propre connexion internet (Wi-Fi/4G), qui envoie réellement à AbaFusion à ce moment-là. Ça marche donc uniquement si le téléphone est connecté à internet ET l'ESP32 branché en USB avec cette page ouverte. <b>Aucun CORS possible</b> ici puisque tout passe par USB + le proxy déjà configuré dans l'onglet AbaFusion. <b>Limite matérielle :</b> si le capteur température n'est pas détecté au démarrage (message série "TEMP_SENSOR:NON_DETECTE"), vérifie le branchement I2C (SDA/SCL). <b>Limite navigateur :</b> Web Serial fonctionne sur Chrome/Edge desktop et Android — pas sur Safari/iOS.</div>
+          <div class="tool-head"><span class="tool-title">🔌 ESP32-01 — Stade de Rabat</span><span class="sim-badge" id="mqttBadge">🟡 NON CONNECTÉ</span></div>
+          <div class="tool-sub">Connexion directe par câble USB — pas de Wi-Fi, pas d'adresse IP, pas de réseau à configurer. Le navigateur parle directement à la carte branchée.</div>
+          <button class="tool-btn primary" id="btnSerialConnect" onclick="connecterMQTT()">🔌 Connecter la carte ESP32 (USB)</button>
+          <div class="tool-note" id="mqttStatus">Branchez l'ESP32 en USB, puis cliquez ci-dessus — une fenêtre Chrome vous demandera de choisir le port (ex. "USB Serial COM5").</div>
+          <div class="tool-note" id="serialUnsupported" style="display:none;color:var(--red-light)">⚠️ Votre navigateur ne supporte pas la connexion USB directe (Web Serial). Utilisez <b>Google Chrome</b> ou <b>Microsoft Edge</b> sur ordinateur (pas de mobile, pas Firefox/Safari).</div>
         </div>
+
+        <div class="tool-card">
+          <div class="tool-head"><span class="tool-title">Commandes</span></div>
+
+          <div class="device-row"><span>💡 LED</span><span id="ledState" class="led-dot off"></span></div>
+          <div class="btn-pair">
+            <button class="tool-btn small" style="background:var(--red);color:var(--white);" onclick="esp32Cmd('LED_RED')">🔴 LED rouge</button>
+            <button class="tool-btn small" style="background:var(--green);color:var(--white);" onclick="esp32Cmd('LED_GREEN')">🟢 LED verte</button>
+          </div>
+          <button class="tool-btn ghost" style="margin-top:6px" onclick="esp32Cmd('LED_OFF')">Éteindre LED</button>
+
+          <div class="device-row" style="margin-top:14px"><span>🔊 Buzzer / sirène</span><span id="buzzerState" class="state-pill off">OFF</span></div>
+          <div class="btn-pair"><button class="tool-btn small primary" onclick="esp32Cmd('BUZZER_ON')">🚨 Alarme forte</button><button class="tool-btn small ghost" onclick="esp32Cmd('BUZZER_OFF')">Arrêter</button></div>
+
+          <div class="device-row" style="margin-top:12px"><span>Mode alerte</span><span id="alertState" class="state-pill off">OFF</span></div>
+          <div class="btn-pair"><button class="tool-btn small primary" onclick="esp32Cmd('ALERT_ON')">Activer</button><button class="tool-btn small ghost" onclick="esp32Cmd('ALERT_OFF')">Désactiver</button></div>
+
+          <div class="device-row" style="margin-top:12px"><span>📡 Capteur infrarouge (IR)</span><span id="irState" class="state-pill off">LIBRE</span></div>
+          <button class="tool-btn small primary" style="width:100%" onclick="simulerIR()">Simuler une détection IR</button>
+          <button class="tool-btn ghost" style="width:100%;margin-top:6px" onclick="lireInfrarougeReel()">📡 Lire le vrai capteur IR</button>
+          <div class="tool-note">Le capteur IR déclenche automatiquement la LED rouge + l'alarme dès qu'un passage est détecté sans validation de ticket au préalable — utile pour surveiller une sortie de secours ou un accès non billetterie.</div>
+
+          <div class="device-row" style="margin-top:14px"><span>🚪 Porte</span><span id="doorState" class="state-pill off">FERMÉE</span></div>
+          <label class="tool-label">Identifiant de la porte</label>
+          <select class="tool-input" id="doorSelect">
+            <option value="PORTE-NORD-01">Porte Nord</option>
+            <option value="PORTE-SUD-01">Porte Sud</option>
+            <option value="PORTE-EST-01">Porte Est</option>
+            <option value="PORTE-OUEST-01">Porte Ouest</option>
+          </select>
+          <div class="btn-pair" style="margin-top:8px"><button class="tool-btn small primary" onclick="ouvrirPorte()">🔓 Ouvrir</button><button class="tool-btn small ghost" onclick="fermerPorte()">🔒 Fermer</button></div>
+
+          <div class="device-row" style="margin-top:14px"><span>🌡️ Température</span><span id="tempState" class="state-pill off">—</span></div>
+          <button class="tool-btn ghost" style="width:100%" onclick="lireTemperature()">Lire la température (capteur réel)</button>
+          <label class="tool-label">Test sans capteur (simulation manuelle, °C)</label>
+          <div class="btn-pair">
+            <input class="tool-input" id="tempSimuleeInput" type="number" value="28" style="flex:0 0 90px">
+            <button class="tool-btn ghost" onclick="testTemperatureSimulee()">Tester ce seuil</button>
+          </div>
+          <div class="tool-note">🔥 Seuil incendie fixé à <b>28°C</b> : au-delà, l'alarme sonne automatiquement et une alerte est envoyée à AbaFusion avec la température exacte.</div>
+
+          <div class="device-row" style="margin-top:14px"><span>⏱️ Minuterie</span><span id="minuterieState" class="state-pill off">INACTIVE</span></div>
+          <input type="number" class="tool-input" id="minuterieSecondes" value="15" min="1" placeholder="Durée en secondes">
+          <div class="btn-pair" style="margin-top:8px"><button class="tool-btn small primary" onclick="demarrerMinuterie()">▶️ Démarrer</button><button class="tool-btn small ghost" onclick="arreterMinuterie()">⏹️ Arrêter</button></div>
+          <div class="tool-note">À la fin du compte à rebours, l'ESP32 déclenche automatiquement l'alerte (LED + buzzer) — si la porte n'est pas refermée (Relais OFF envoyé) dans les 15 minutes qui suivent, une alerte est envoyée automatiquement à AbaFusion.</div>
+
+          <div class="tool-note">🔊 Pensez à monter le volume de votre appareil pour tester l'alarme. Le mode « Alarme forte » alterne deux fréquences (effet sirène) tant qu'il n'est pas arrêté.</div>
+        </div>
+
+        <div class="section-title"><h2>Registre de traçabilité</h2></div>
+        <div id="auditLog"></div>
       </div>
 
       <!-- ===== SCAN FACIAL ===== -->
@@ -415,6 +428,10 @@
             <button class="tool-btn primary" onclick="captureFace()">✅ Capturer / Vérifier</button>
           </div>
           <div class="scan-result" id="faceResult"></div>
+          <label class="tool-label" style="margin-top:14px">URL du proxy Azure Face (optionnel — voir azure-face-proxy-worker.js)</label>
+          <input class="tool-input" id="azureFaceProxy" placeholder="https://azure-face-proxy.xxx.workers.dev">
+          <button class="tool-btn primary" onclick="identifyViaAzure()" style="margin-top:8px">🧠 Identifier le visage via Azure Face</button>
+          <div class="scan-result" id="azureResult"></div>
           <div class="honest-note"><b>Ce que fait réellement ce module :</b> il capture une vraie photo via ta caméra et détecte si un visage est présent dans le cadre (liveness basique). <b>Ce qu'il ne fait pas :</b> il ne reconnaît pas l'identité d'une personne parmi plusieurs (ça demanderait un moteur de reconnaissance faciale entraîné + une base de visages de référence, hors de portée d'une page web seule). Si tu as besoin de vraie identification 1-vers-N, il faut un service dédié (AWS Rekognition, Azure Face, etc.) — dis-le-moi et je peux préparer l'intégration.</div>
         </div>
       </div>
@@ -465,14 +482,33 @@
       <!-- ===== PRESSE ===== -->
       <div class="outil-panel" id="outil-presse">
         <div class="tool-card">
-          <div class="tool-head"><div class="tool-title">📣 Communication — Presse</div></div>
-          <div class="tool-sub">Envoi réel via WhatsApp (ouvre une vraie conversation) et par email.</div>
+          <div class="tool-head"><div class="tool-title">📣 Communication — Presse</div><span class="sim-badge pending" id="pressStatusBadge">BROUILLON</span></div>
+          <div class="tool-sub">Type d'incident, gravité, puis génération d'un message prêt à envoyer.</div>
 
-          <label class="tool-label">Numéro WhatsApp (avec indicatif, ex: 2126xxxxxxxx)</label>
+          <label class="tool-label">Type d'incident</label>
+          <div class="chip-select">
+            <button class="mini-chip active" data-inc="Faux site" onclick="setIncidentType('Faux site', this)">Faux site</button>
+            <button class="mini-chip" data-inc="Faux billet" onclick="setIncidentType('Faux billet', this)">Faux billet</button>
+            <button class="mini-chip" data-inc="Phishing" onclick="setIncidentType('Phishing', this)">Phishing</button>
+            <button class="mini-chip" data-inc="Fraude" onclick="setIncidentType('Fraude', this)">Fraude</button>
+            <button class="mini-chip" data-inc="Cyberattaque" onclick="setIncidentType('Cyberattaque', this)">Cyberattaque</button>
+          </div>
+          <label class="tool-label">Gravité</label>
+          <select class="tool-input" id="pressSeverity"><option value="LOW">Faible</option><option value="MEDIUM" selected>Moyenne</option><option value="HIGH">Élevée</option><option value="CRITICAL">Critique</option></select>
+          <label class="tool-label">Résumé court de l'incident</label>
+          <input class="tool-input" id="pressSummary" placeholder="Ex : Site frauduleux imitant la billetterie officielle">
+          <button class="tool-btn ghost" onclick="generatePressMessage()" style="margin-top:8px">📝 Générer le message</button>
+          <label class="tool-label" style="margin-top:10px">Message (modifiable avant envoi)</label>
+          <textarea class="tool-input" id="pressGeneratedMsg" style="height:90px">Le message généré apparaîtra ici...</textarea>
+          <button class="tool-btn primary" onclick="approvePressMessage()">✅ Approuver</button>
+          <div class="honest-note" style="margin-top:8px"><b>Génération :</b> composée à partir d'un modèle local (type + gravité + résumé), pas un appel à un vrai modèle d'IA externe — modifie librement le texte avant d'envoyer. Une fois "Approuvé", utilise WhatsApp/Email ci-dessous ou les canaux presse pour l'envoyer réellement.</div>
+
+          <label class="tool-label" style="margin-top:16px">Numéro WhatsApp (avec indicatif, ex: 2126xxxxxxxx)</label>
           <input class="tool-input" id="waNumber" placeholder="212600000000">
           <label class="tool-label">Message</label>
           <textarea class="tool-input" id="waMessage">Alerte SafeStade Pro : anomalie détectée, merci de vérifier.</textarea>
           <button class="tool-btn green" onclick="sendWhatsApp()">🟢 Envoyer sur WhatsApp</button>
+          <div id="waFallback" style="margin-top:6px;font-size:11px"></div>
 
           <label class="tool-label" style="margin-top:16px">Email destinataire</label>
           <input class="tool-input" id="mailTo" placeholder="contact@exemple.com">
@@ -480,9 +516,21 @@
           <input class="tool-input" id="mailSubject" value="Alerte SafeStade Pro">
           <label class="tool-label">Message</label>
           <textarea class="tool-input" id="mailBody">Une anomalie a été détectée par SafeStade Pro. Merci de vérifier le tableau de bord.</textarea>
-          <button class="tool-btn primary" onclick="sendEmail()">✉️ Envoyer l'email</button>
+          <button class="tool-btn primary" onclick="sendEmail()">✉️ Envoyer via Gmail (recommandé)</button>
+          <button class="tool-btn ghost" onclick="sendEmailViaMailto()">Envoyer via mon client mail installé</button>
 
-          <div class="honest-note"><b>WhatsApp :</b> ouvre une vraie conversation WhatsApp (app ou web) avec le numéro et message pré-remplis — l'envoi final se fait d'un vrai clic dans WhatsApp, comportement normal et volontaire (aucune app tierce ne peut envoyer un WhatsApp à ta place sans ton clic). <b>Email :</b> ouvre ton vrai client mail (Gmail, Outlook…) avec le message prêt à envoyer. <b>Synchronisation AbaFusion :</b> chaque envoi WhatsApp ou email est automatiquement transmis à AbaFusion — via l'ESP32 en USB s'il est connecté (aucun CORS), sinon via le webhook/proxy du navigateur.</div>
+          <div class="honest-note"><b>WhatsApp :</b> ouvre une vraie conversation WhatsApp (app ou web) avec le numéro et message pré-remplis — l'envoi final se fait d'un vrai clic dans WhatsApp, comportement normal et volontaire (aucune app tierce ne peut envoyer un WhatsApp à ta place sans ton clic). <b>Email :</b> ouvre Gmail web (ou ton client installé) avec le message prêt à envoyer. <b>Synchronisation AbaFusion :</b> chaque envoi WhatsApp ou email est automatiquement transmis à AbaFusion.</div>
+
+          <label class="tool-label" style="margin-top:16px">Canaux presse marocains (contact manuel)</label>
+          <div class="press-grid">
+            <button class="press-btn" onclick="openPressChannel('https://www.hespress.com/contact')">Hespress</button>
+            <button class="press-btn" onclick="openPressChannel('https://choftv.ma/contact/')">Chouf TV</button>
+            <button class="press-btn" onclick="openPressChannel('https://www.le360.ma/contact')">Le360</button>
+            <button class="press-btn" onclick="openPressChannel('https://medi1tv.com/contact')">Medi1 TV</button>
+          </div>
+          <label class="tool-label">Autorité nationale</label>
+          <button class="tool-btn primary" onclick="openPressChannel('https://www.dgssi.gov.ma')">🛡️ Notifier la DGSSI</button>
+          <div class="honest-note">Aucune API réelle connectée pour ces canaux — ces boutons ouvrent le site officiel réel de chacun dans un nouvel onglet, pour un contact manuel (rédaction ou signalement).</div>
         </div>
       </div>
 
@@ -527,6 +575,49 @@
           </div>
           <button class="tool-btn green" onclick="sendCipherEverywhere()" style="margin-top:10px">📤 Envoyer le chiffré — AbaFusion (ESP32) + WhatsApp + Email</button>
           <div class="honest-note"><b>Réel :</b> SHA-256 et AES-256-GCM = API native <code>Web Crypto</code>, pas une simulation. <b>Sécurité :</b> le texte en clair n'est jamais envoyé — seulement le hash ou le chiffré. <b>Limite technique honnête :</b> WhatsApp/email ont une limite de longueur de message — si le contenu chiffré est trop long, seul un extrait + la mention "texte complet envoyé à AbaFusion" partent par ces deux canaux ; AbaFusion, lui, reçoit toujours l'intégralité. Mot de passe perdu = contenu irrécupérable, pour tout le monde.</div>
+        </div>
+      </div>
+
+      <!-- ===== DROIT & PREUVES ===== -->
+      <div class="outil-panel" id="outil-droit">
+        <div class="tool-card">
+          <div class="tool-head"><div class="tool-title">⚖️ Chaîne de preuve numérique</div><span class="sim-badge on" id="chainBadge">Bloc n°0</span></div>
+          <div class="tool-sub">Empreinte SHA-256 + horodatage, chaque preuve référence la précédente (façon blockchain simplifiée) — infalsifiable sans casser la chaîne.</div>
+          <label class="tool-label">Description de la preuve (log, capture, fichier…)</label>
+          <textarea class="tool-input" id="proofDesc" style="height:70px" placeholder="Ex : Capture d'écran — tentative d'intrusion 10:41, IP 41.xxx.xxx.xxx"></textarea>
+          <button class="tool-btn primary" onclick="generateProofBlock()">🔗 Générer l'empreinte (hash)</button>
+          <div id="proofResult" class="status-line" style="display:none;flex-direction:column;align-items:flex-start;gap:4px"></div>
+          <button class="tool-btn green" onclick="sendLastProofToAbaFusion()" style="margin-top:8px">📤 Envoyer ce bloc à AbaFusion</button>
+
+          <label class="tool-label" style="margin-top:16px">Vérifier l'intégrité d'une preuve existante</label>
+          <textarea class="tool-input" id="verifyText" style="height:60px" placeholder="Recolle le texte original de la preuve..."></textarea>
+          <input class="tool-input" id="verifyHash" placeholder="Hash SHA-256 attendu (64 caractères)" style="margin-top:6px">
+          <button class="tool-btn ghost" onclick="verifyProofIntegrity()" style="margin-top:8px">Vérifier l'intégrité</button>
+          <div id="verifyResult" class="scan-result"></div>
+        </div>
+
+        <div class="tool-card">
+          <div class="tool-head"><div class="tool-title">📄 PV de signalement</div></div>
+          <div class="tool-sub">Génère un procès-verbal prêt à transmettre, protégé par une vraie confirmation biométrique.</div>
+          <label class="tool-label">Type d'infraction</label>
+          <select class="tool-input" id="pvType"><option>Cyberattaque / intrusion réseau</option><option>Fraude billetterie</option><option>Usurpation d'identité</option><option>Atteinte à la sécurité physique</option></select>
+          <label class="tool-label">Résumé des faits</label>
+          <textarea class="tool-input" id="pvFacts" style="height:80px" placeholder="Décrivez les faits constatés..."></textarea>
+          <button class="tool-btn primary" onclick="generatePV()">📝 Générer le PV (empreinte requise)</button>
+          <div id="pvResult" class="scan-result"></div>
+          <button class="tool-btn green" onclick="sendLastPVToAbaFusion()" style="margin-top:8px">📤 Envoyer ce PV à AbaFusion</button>
+          <div class="honest-note">La génération du PV exige une vérification biométrique réelle (WebAuthn, onglet Empreinte) avant de finaliser — sécurité à 2 facteurs, pas une simulation.</div>
+        </div>
+      </div>
+
+      <!-- ===== BLOCKCHAIN (registre local des preuves) ===== -->
+      <div class="outil-panel" id="outil-blockchain">
+        <div class="tool-card">
+          <div class="tool-head"><div class="tool-title">⛓️ Registre blockchain local</div><span class="sim-badge on">SHA-256 réel</span></div>
+          <div class="tool-sub">Chaque bloc référence le hash du précédent — modifier un bloc ancien casse toute la chaîne qui suit, ce qui rend la falsification détectable.</div>
+          <div id="blockchainLedger"></div>
+          <button class="tool-btn ghost" onclick="renderBlockchain()" style="margin-top:8px">Rafraîchir</button>
+          <div class="honest-note">Registre stocké localement sur cet appareil (pas distribué sur un vrai réseau blockchain) — pour une vraie décentralisation inter-organismes, il faudrait publier ces blocs sur un registre partagé (ex: via AbaFusion) plutôt qu'en local uniquement.</div>
         </div>
       </div>
 
@@ -584,11 +675,9 @@ function toast(msg, ms){
 function setAbaStatus(state, msg){
   const pill = document.getElementById('abaStatusPill');
   const badge = document.getElementById('abaBadge');
-  pill.textContent = msg;
-  pill.className = 'state-pill ' + (state==='ok'?'on':state==='pending'?'pending':'');
-  badge.textContent = state==='ok' ? 'CONNECTÉ' : state==='pending' ? 'ENVOI…' : 'ÉCHEC';
-  badge.className = 'sim-badge ' + (state==='ok'?'on':state==='pending'?'pending':'');
-  document.getElementById('dashWebhookStatus').textContent = msg;
+  if(pill){ pill.textContent = msg; pill.className = 'state-pill ' + (state==='ok'?'on':state==='pending'?'pending':''); }
+  if(badge){ badge.textContent = state==='ok' ? 'CONNECTÉ' : state==='pending' ? 'ENVOI…' : 'ÉCHEC'; badge.className = 'sim-badge ' + (state==='ok'?'on':state==='pending'?'pending':''); }
+  const dashWh = document.getElementById('dashWebhookStatus'); if(dashWh) dashWh.textContent = msg;
 }
 async function testWebhook(){
   const url = document.getElementById('abaUrl').value.trim();
@@ -614,6 +703,7 @@ async function sendWebhook(){
   try{
     payload = JSON.parse(payloadRaw);
     payload.timestamp = new Date().toISOString();
+    if('heure' in payload) payload.heure = new Date().toLocaleTimeString('fr-FR');
   }catch(e){
     toast('JSON invalide dans la charge utile'); return;
   }
@@ -653,35 +743,31 @@ async function sendWebhook(){
   }
 }
 
-/* ---------- ESP32 : USB Serial UNIQUEMENT (aucune IP, aucun Wi-Fi, aucun Bluetooth) ---------- */
-let espCmd = 'LED1_ON';
+/* ---------- ESP32 (safestade-pro) : USB Serial UNIQUEMENT ---------- */
 let serialPort = null, serialWriter = null, serialReader = null;
-let pendingSensorResolve = null;
 
-function setEspCmd(cmd, el){
-  espCmd = cmd;
-  document.querySelectorAll('[data-cmd]').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
+function setMqttConnected(ok){
+  const badge = document.getElementById('mqttBadge');
+  badge.textContent = ok ? '🟢 CONNECTÉ' : '🟡 NON CONNECTÉ';
+  const dashEsp = document.getElementById('dashEspStatus'); if(dashEsp) dashEsp.textContent = ok ? 'USB connecté' : 'Déconnecté';
 }
-function setEspConnected(ok, label){
-  document.getElementById('espLed').className = 'led-dot ' + (ok?'green':'red');
-  const pill = document.getElementById('espStatusPill');
-  pill.textContent = label;
-  pill.className = 'state-pill ' + (ok?'on':'');
-  document.getElementById('dashEspStatus').textContent = label;
-}
-async function connectSerial(){
-  if(!navigator.serial){ toast('Web Serial non supporté par ce navigateur — utilise Chrome ou Edge (desktop ou Android). Safari/iOS ne le supporte pas.', 6000); return; }
+async function connecterMQTT(){
+  if(!navigator.serial){
+    document.getElementById('serialUnsupported').style.display = 'block';
+    toast('Web Serial non supporté — utilise Chrome ou Edge sur ordinateur.', 6000);
+    return;
+  }
   try{
     serialPort = await navigator.serial.requestPort();
     await serialPort.open({ baudRate: 115200 });
     serialWriter = serialPort.writable.getWriter();
-    setEspConnected(true, 'USB Serial connecté');
+    setMqttConnected(true);
+    document.getElementById('mqttStatus').textContent = 'Carte ESP32 connectée par USB. Les boutons ci-dessus la pilotent directement.';
     toast('ESP32 connecté en USB (hors-ligne, aucune IP)');
-    logAudit('ESP32 connecté via USB');
+    addAuditEntry('CONNECTED');
     readSerialLoop();
   }catch(err){
-    setEspConnected(false, 'Échec USB : ' + err.message);
+    setMqttConnected(false);
     toast('Échec connexion USB : ' + err.message, 4500);
   }
 }
@@ -707,21 +793,24 @@ async function readSerialLoop(){
 function handleSerialLine(line){
   if(line.startsWith('TEMP:')){
     const val = line.split(':')[1];
-    document.getElementById('tempPill').textContent = val + ' °C';
-    document.getElementById('tempPill').className = 'state-pill on';
-    logAudit('Température lue (USB) : ' + val + ' °C');
+    const el = document.getElementById('tempState');
+    if(el){ el.textContent = val + ' °C'; el.className = 'state-pill on'; }
+    checkTempAlarm(parseFloat(val), 'capteur réel (USB)');
   } else if(line.startsWith('IR:')){
     const state = line.split(':')[1];
-    const pill = document.getElementById('irPill');
-    if(state === 'AUTO_TRIGGER'){ logAudit('IR : détection automatique, alarme déclenchée', true); return; }
-    pill.textContent = state === 'DETECTED' ? 'DÉTECTÉ' : 'LIBRE';
-    pill.className = 'state-pill' + (state==='DETECTED' ? '' : ' on');
-    logAudit('Capteur IR lu (USB) : ' + state);
+    if(state === 'AUTO_TRIGGER'){
+      addAuditEntry('IR_DETECTION', true);
+      setLedState('red'); setBuzzerState(true);
+      startDoorWatchdog();
+      syncToAbaFusion('ir_auto_alarm', { device:'ESP32-01', stade:'Stade de Rabat' });
+      return;
+    }
+    const el = document.getElementById('irState');
+    if(el){ el.textContent = state === 'DETECTED' ? 'DÉTECTÉ' : 'LIBRE'; el.className = 'state-pill' + (state==='DETECTED'?'':' on'); }
+    addAuditEntry(state === 'DETECTED' ? 'IR_DETECTION' : 'IR_CLEAR');
   } else if(line === 'BTN1:TRIGGER_ABAFUSION'){
-    // L'ESP32 n'a aucun Wi-Fi : il signale juste l'appui. C'est le téléphone,
-    // avec sa propre connexion internet, qui envoie réellement à AbaFusion.
     toast('Bouton BTN1 de la carte détecté — envoi à AbaFusion via le téléphone…');
-    logAudit('BTN1 (carte, sans Wi-Fi) → envoi déclenché depuis le téléphone');
+    addAuditEntry('BTN1_ABAFUSION');
     quickConnectAbaFusion();
   }
 }
@@ -730,56 +819,229 @@ async function sendWebhookViaEsp32(){
   try{
     await serialWriter.write(new TextEncoder().encode('TEST_BTN1\n'));
     toast('Simulation de l\'appui BTN1 envoyée à l\'ESP32…');
-    logAudit('Test BTN1 déclenché depuis l\'appli');
-  }catch(err){
-    toast('Échec : ' + err.message, 4500);
+    addAuditEntry('TEST_BTN1');
+  }catch(err){ toast('Échec : ' + err.message, 4500); }
+}
+async function esp32Cmd(cmd){
+  // Si l'ESP32 est branché en USB, on lui envoie vraiment la commande.
+  // Sinon, on continue quand même : mise à jour de l'UI + envoi à AbaFusion,
+  // pour que la synchro AbaFusion fonctionne sans matériel branché.
+  if(serialWriter){
+    try{ await serialWriter.write(new TextEncoder().encode(cmd+'\n')); }
+    catch(err){ toast('Échec écriture USB : '+err.message, 4500); }
+  } else {
+    toast('ESP32 non connecté — commande simulée, envoyée quand même à AbaFusion', 3500);
+  }
+  addAuditEntry(cmd + (serialWriter ? '' : ' (simulée)'));
+  syncToAbaFusion('esp32_command', { command: cmd, stade: 'Stade de Rabat', hardware: serialWriter ? 'réel' : 'simulé' });
+  if(cmd === 'LED_RED'){ setLedState('red'); }
+  else if(cmd === 'LED_GREEN'){ setLedState('green'); }
+  else if(cmd === 'LED_OFF'){ setLedState('off'); }
+  else if(cmd === 'BUZZER_ON'){ setBuzzerState(true); startDoorWatchdog(); startAlarmSound(); }
+  else if(cmd === 'BUZZER_OFF'){ setBuzzerState(false); clearDoorWatchdog(); stopAlarmSound(); }
+  else if(cmd === 'ALERT_ON'){ setAlertState(true); }
+  else if(cmd === 'ALERT_OFF'){ setAlertState(false); }
+  else if(cmd.startsWith('RELAY')){ clearDoorWatchdog(); }
+}
+function simulerIR(){
+  if(serialWriter){ serialWriter.write(new TextEncoder().encode('IR_SIMULATE\n')); }
+  else { toast('ESP32 non connecté — simulation locale, envoyée quand même à AbaFusion', 3500); }
+  addAuditEntry('IR_DETECTION (simulée)', true);
+  setLedState('red'); setBuzzerState(true);
+  startDoorWatchdog();
+  syncToAbaFusion('ir_auto_alarm', { device:'ESP32-01', stade:'Stade de Rabat', hardware: serialWriter ? 'réel' : 'simulé' });
+}
+async function lireInfrarougeReel(){ await esp32Cmd('GET_IR'); }
+async function lireTemperature(){ await esp32Cmd('GET_TEMP'); }
+
+const SEUIL_INCENDIE_C = 28;
+function checkTempAlarm(tempC, source){
+  if(isNaN(tempC)) return;
+  if(tempC >= SEUIL_INCENDIE_C){
+    setBuzzerState(true); setLedState('red'); startAlarmSound();
+    addAuditEntry('ALERTE_INCENDIE_TEMP_' + tempC + 'C', true);
+    toast('🔥 Température ' + tempC + '°C ≥ seuil incendie (' + SEUIL_INCENDIE_C + '°C) — alerte envoyée à AbaFusion', 6000);
+    syncToAbaFusion('alerte_incendie', {
+      stade: 'Stade de Rabat',
+      temperatureExacte: tempC,
+      seuil: SEUIL_INCENDIE_C,
+      source: source,
+      description: 'Température de ' + tempC + '°C détectée au Stade de Rabat (' + source + '), au-delà du seuil incendie de ' + SEUIL_INCENDIE_C + '°C. Alarme sonore et LED rouge déclenchées automatiquement. Vérification humaine et intervention pompiers si nécessaire.'
+    });
   }
 }
-async function sendEspCommand(){
-  await sendEspRawCommand(espCmd);
+function testTemperatureSimulee(){
+  const val = parseFloat(document.getElementById('tempSimuleeInput').value);
+  if(isNaN(val)){ toast('Renseigne une température valide'); return; }
+  const el = document.getElementById('tempState');
+  if(el){ el.textContent = val + ' °C (test)'; el.className = 'state-pill on'; }
+  checkTempAlarm(val, 'test manuel (sans capteur)');
 }
-async function sendEspRawCommand(cmd){
-  if(!serialWriter){ toast('Connecte d\'abord l\'ESP32 en USB'); return; }
-  try{
-    await serialWriter.write(new TextEncoder().encode(cmd+'\n'));
-    toast('Commande '+cmd+' envoyée en USB (hors-ligne)');
-    logAudit('ESP32 (USB) : ' + cmd);
-    syncToAbaFusion('esp32_command', { command: cmd });
-  }catch(err){ toast('Échec écriture USB : '+err.message, 4500); }
+
+/* ---------- Porte (Nord/Sud/Est/Ouest) : format JSON door_id / status / zone ---------- */
+let doorStatus = 'OPEN'; // état réel suivi en direct : 'OPEN' ou 'CLOSED' — par défaut ouverte tant que "Fermer" n'a pas été cliqué
+function getSelectedDoor(){ return document.getElementById('doorSelect').value; }
+function getDoorLabel(id){
+  return {'PORTE-NORD-01':'Porte Nord','PORTE-SUD-01':'Porte Sud','PORTE-EST-01':'Porte Est','PORTE-OUEST-01':'Porte Ouest'}[id] || id;
 }
-async function readEspSensorSerial(cmd){
-  await sendEspRawCommand(cmd);
+async function ouvrirPorte(){
+  const doorId = getSelectedDoor();
+  await esp32Cmd('RELAY1_ON');
+  const el = document.getElementById('doorState');
+  if(el){ el.textContent = 'OUVERTE'; el.className = 'state-pill'; }
+  doorStatus = 'OPEN';
+  addAuditEntry(getDoorLabel(doorId) + '_OUVERTE', true);
+  startDoorWatchdog();
+  syncToAbaFusion('porte_etat', {
+    door_id: doorId,
+    status: 'OPEN',
+    zone: 'controle_acces',
+    stade: 'Stade de Rabat',
+    timestamp: new Date().toISOString(),
+    description: getDoorLabel(doorId) + ' ouverte au Stade de Rabat, zone contrôle d\'accès.'
+  });
 }
-function setAlertPill(on){
-  const p = document.getElementById('alertPill');
-  p.textContent = on ? 'ON' : 'OFF';
-  p.className = 'state-pill' + (on?' on':'');
+async function fermerPorte(){
+  const doorId = getSelectedDoor();
+  await esp32Cmd('RELAY1_OFF');
+  const el = document.getElementById('doorState');
+  if(el){ el.textContent = 'FERMÉE'; el.className = 'state-pill off'; }
+  doorStatus = 'CLOSED';
+  addAuditEntry(getDoorLabel(doorId) + '_FERMEE');
+  clearDoorWatchdog();
+  syncToAbaFusion('porte_etat', {
+    door_id: doorId,
+    status: 'CLOSED',
+    zone: 'controle_acces',
+    stade: 'Stade de Rabat',
+    timestamp: new Date().toISOString(),
+    description: getDoorLabel(doorId) + ' refermée au Stade de Rabat, zone contrôle d\'accès.'
+  });
 }
-let espTimerInterval = null;
-function startEspTimer(){
-  let seconds = parseInt(document.getElementById('timerSeconds').value, 10);
+
+function setLedState(color){
+  const el = document.getElementById('ledState');
+  if(el) el.className = 'led-dot ' + (color==='red'?'red':color==='green'?'green':'off');
+}
+function setBuzzerState(on){
+  const el = document.getElementById('buzzerState');
+  if(el){ el.textContent = on?'ON':'OFF'; el.className = 'state-pill' + (on?' on':''); }
+}
+function setAlertState(on){
+  const el = document.getElementById('alertState');
+  if(el){ el.textContent = on?'ON':'OFF'; el.className = 'state-pill' + (on?' on':''); }
+}
+
+/* ---------- Minuterie (identique safestade-pro) ---------- */
+let minuterieInterval = null;
+let minuterieDureeOrigine = 0;
+function demarrerMinuterie(){
+  let seconds = parseInt(document.getElementById('minuterieSecondes').value, 10);
   if(!seconds || seconds <= 0){ toast('Renseigne une durée valide'); return; }
-  stopEspTimer();
-  const pill = document.getElementById('timerPill');
-  pill.textContent = seconds + 's'; pill.className='state-pill on';
-  logAudit('Minuterie ESP32 démarrée : ' + seconds + 's');
-  espTimerInterval = setInterval(()=>{
+  minuterieDureeOrigine = seconds;
+  arreterMinuterie();
+  const pill = document.getElementById('minuterieState');
+  pill.textContent = seconds + 's'; pill.className = 'state-pill on';
+  addAuditEntry('MINUTERIE_DEMARREE(' + seconds + 's)');
+  minuterieInterval = setInterval(()=>{
     seconds--;
     if(seconds <= 0){
-      clearInterval(espTimerInterval); espTimerInterval = null;
-      pill.textContent = 'DÉCLENCHÉE'; pill.className='state-pill';
-      sendEspRawCommand('ALARM_ON');
-      toast('Minuterie terminée — alarme déclenchée');
-      logAudit('Minuterie terminée : alarme déclenchée', true);
+      clearInterval(minuterieInterval); minuterieInterval = null;
+      pill.textContent = 'DÉCLENCHÉE'; pill.className = 'state-pill';
+      if(doorStatus !== 'OPEN'){
+        addAuditEntry('MINUTERIE_TERMINEE_PORTE_DEJA_FERMEE');
+        toast('⏱️ Minuterie terminée — porte déjà fermée, aucune alarme nécessaire');
+        return;
+      }
+      setBuzzerState(true);
+      setLedState('red');
+      startAlarmSound();
+      startDoorWatchdog();
+      addAuditEntry('MINUTERIE_TERMINEE_ALARME', true);
+      toast('🚨 15s atteintes, porte toujours ouverte — buzzer fort + LED rouge + alerte AbaFusion', 5500);
+      syncToAbaFusion('minuterie_expiree', {
+        stade: 'Stade de Rabat',
+        door_id: getSelectedDoor(),
+        status: 'OPEN',
+        zone: 'controle_acces',
+        alerte: 'Porte non fermée',
+        dureeMinuterie: minuterieDureeOrigine,
+        description: getDoorLabel(getSelectedDoor()) + ' toujours ouverte après ' + minuterieDureeOrigine + ' secondes au Stade de Rabat. Buzzer fort et LED rouge déclenchés automatiquement, minuterie et alerte envoyées simultanément. Vérification humaine requise immédiatement.',
+        hardware: serialWriter ? 'réel' : 'simulé (aucun ESP32 branché — alarme sonore jouée par le navigateur)'
+      });
+      if(serialWriter){ serialWriter.write(new TextEncoder().encode('BUZZER_ON\n')); }
     } else {
       pill.textContent = seconds + 's';
     }
   }, 1000);
 }
-function stopEspTimer(){
-  if(espTimerInterval){ clearInterval(espTimerInterval); espTimerInterval=null; }
-  document.getElementById('timerPill').textContent='INACTIVE';
-  document.getElementById('timerPill').className='state-pill pending';
+function arreterMinuterie(){
+  if(minuterieInterval){ clearInterval(minuterieInterval); minuterieInterval = null; }
+  const pill = document.getElementById('minuterieState');
+  if(pill){ pill.textContent = 'INACTIVE'; pill.className = 'state-pill off'; }
+  stopAlarmSound();
+  setBuzzerState(false);
+  clearDoorWatchdog();
+}
+
+/* ---------- Alarme sonore RÉELLE jouée par le navigateur (utile quand aucun ESP32 n'est branché) ---------- */
+let alarmAudioCtx = null, alarmOscillator = null, alarmSirenTimer = null;
+function startAlarmSound(){
+  stopAlarmSound();
+  try{
+    alarmAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    alarmOscillator = alarmAudioCtx.createOscillator();
+    const gain = alarmAudioCtx.createGain();
+    gain.gain.value = 0.25;
+    alarmOscillator.connect(gain); gain.connect(alarmAudioCtx.destination);
+    alarmOscillator.type = 'square';
+    alarmOscillator.frequency.value = 880;
+    alarmOscillator.start();
+    let high = true;
+    alarmSirenTimer = setInterval(()=>{
+      high = !high;
+      alarmOscillator.frequency.value = high ? 880 : 660;
+    }, 300);
+  }catch(e){ /* AudioContext indisponible */ }
+}
+function stopAlarmSound(){
+  if(alarmSirenTimer){ clearInterval(alarmSirenTimer); alarmSirenTimer = null; }
+  if(alarmOscillator){ try{ alarmOscillator.stop(); }catch(e){} alarmOscillator = null; }
+  if(alarmAudioCtx){ try{ alarmAudioCtx.close(); }catch(e){} alarmAudioCtx = null; }
+}
+
+/* ---------- Registre de traçabilité (format identique safestade-pro) ---------- */
+function addAuditEntry(cmd, warn){
+  logAudit('ESP32 (USB) : ' + cmd, warn);
+  const box = document.getElementById('auditLog');
+  if(!box) return;
+  const row = document.createElement('div');
+  row.className = 'audit-row';
+  row.innerHTML = '<span class="a-cmd">ADMIN · ESP32-01</span><span class="a-cmd">'+cmd+'</span><span class="a-time">'+new Date().toLocaleTimeString('fr-FR')+'</span>';
+  box.insertBefore(row, box.firstChild);
+  while(box.children.length > 20) box.removeChild(box.lastChild);
+}
+
+/* ---------- Surveillance "porte non refermée" : escalade automatique vers AbaFusion après 15 min ---------- */
+let doorWatchdogTimer = null;
+const DOOR_WATCHDOG_MS = 15 * 60 * 1000; // 15 minutes
+function startDoorWatchdog(){
+  clearDoorWatchdog();
+  addAuditEntry('SURVEILLANCE_PORTE_DEMARREE');
+  doorWatchdogTimer = setTimeout(()=>{
+    doorWatchdogTimer = null;
+    addAuditEntry('PORTE_NON_REFERMEE_15MIN', true);
+    toast('⚠️ Porte non refermée depuis 15 min — alerte envoyée à AbaFusion', 6000);
+    syncToAbaFusion('door_not_closed_15min', {
+      stade: 'Stade de Rabat',
+      device: 'ESP32-01',
+      description: 'Alarme déclenchée (LED + buzzer) suite à un dépassement de la minuterie de sécurité. La porte du Stade de Rabat n\'a toujours pas été refermée 15 minutes après le déclenchement de l\'alerte. Intervention humaine requise immédiatement.',
+      timestamp: new Date().toISOString()
+    });
+  }, DOOR_WATCHDOG_MS);
+}
+function clearDoorWatchdog(){
+  if(doorWatchdogTimer){ clearTimeout(doorWatchdogTimer); doorWatchdogTimer = null; addAuditEntry('SURVEILLANCE_PORTE_ANNULEE'); }
 }
 
 /* ---------- Connexion rapide AbaFusion (test puis envoi, en un clic) ---------- */
@@ -856,6 +1118,38 @@ function switchCamera(){
   toast('Bascule vers la caméra ' + (camFacing==='user'?'avant':'arrière') + '…');
   startCamera();
 }
+async function identifyViaAzure(){
+  const proxy = document.getElementById('azureFaceProxy').value.trim();
+  const resultBox = document.getElementById('azureResult');
+  if(!lastCapturedFaceDataUrl){ toast('Capture d\'abord une photo avec "Capturer / Vérifier"'); return; }
+  if(!proxy){ toast('Renseigne l\'URL du proxy Azure Face (voir azure-face-proxy-worker.js)', 5000); return; }
+  resultBox.className = 'scan-result valid';
+  resultBox.innerHTML = '<div class="sr-label">⏳ Analyse en cours…</div>';
+  try{
+    const res = await fetch(proxy, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ image: lastCapturedFaceDataUrl })
+    });
+    const data = await res.json();
+    if(Array.isArray(data) && data.length > 0){
+      const f = data[0];
+      resultBox.className = 'scan-result valid';
+      resultBox.innerHTML = '<div class="sr-label">✅ Visage analysé par Azure</div><div class="sr-meta">Âge estimé : '+(f.faceAttributes?.age||'?')+' · Genre : '+(f.faceAttributes?.gender||'?')+'</div>';
+      logAudit('Visage analysé via Azure Face');
+    } else if(Array.isArray(data) && data.length === 0){
+      resultBox.className = 'scan-result invalid';
+      resultBox.innerHTML = '<div class="sr-label">⚠️ Aucun visage détecté par Azure</div>';
+    } else {
+      resultBox.className = 'scan-result invalid';
+      resultBox.innerHTML = '<div class="sr-label">❌ Erreur Azure</div><div class="sr-meta">'+(data.error?.message || data.error || JSON.stringify(data)).toString().slice(0,150)+'</div>';
+    }
+  }catch(err){
+    resultBox.className = 'scan-result invalid';
+    resultBox.innerHTML = '<div class="sr-label">❌ Échec de connexion au proxy</div><div class="sr-meta">'+err.message+'</div>';
+  }
+}
+let lastCapturedFaceDataUrl = null;
 async function captureFace(){
   const video = document.getElementById('camVideo');
   const canvas = document.getElementById('camCanvas');
@@ -866,6 +1160,7 @@ async function captureFace(){
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   const dataUrl = canvas.toDataURL('image/png');
+  lastCapturedFaceDataUrl = dataUrl;
   img.src = dataUrl; img.style.display='block'; video.style.display='none';
 
   let faceDetected = null;
@@ -935,18 +1230,23 @@ async function enrollFingerprint(){
     toast('Échec de l\'enregistrement : ' + err.message, 4500);
   }
 }
+async function verifyFingerprintSilent(){
+  if(!fpCredentialId) throw new Error('Aucune empreinte enregistrée sur cet appareil');
+  await navigator.credentials.get({
+    publicKey:{
+      challenge: rnd(32),
+      allowCredentials:[{ id: Uint8Array.from(atob(fpCredentialId.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0)), type:'public-key' }],
+      userVerification:'required',
+      timeout:60000
+    }
+  });
+  return true;
+}
 async function verifyFingerprint(){
   const resultBox = document.getElementById('fpResult');
   if(!fpCredentialId){ toast('Enregistre d\'abord une empreinte'); return; }
   try{
-    await navigator.credentials.get({
-      publicKey:{
-        challenge: rnd(32),
-        allowCredentials:[{ id: Uint8Array.from(atob(fpCredentialId.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0)), type:'public-key' }],
-        userVerification:'required',
-        timeout:60000
-      }
-    });
+    await verifyFingerprintSilent();
     resultBox.className='scan-result valid';
     resultBox.innerHTML='<div class="sr-label">✅ Empreinte vérifiée</div><div class="sr-meta">Authentification confirmée par le capteur biométrique réel de l\'appareil.</div>';
     toast('Empreinte vérifiée avec succès');
@@ -958,13 +1258,57 @@ async function verifyFingerprint(){
 }
 
 /* ---------- PRESSE : WhatsApp + Email réels ---------- */
+/* ---------- PRESSE : type d'incident + génération de message (modèle local) ---------- */
+let currentIncidentType = 'Faux site';
+function setIncidentType(type, el){
+  currentIncidentType = type;
+  document.querySelectorAll('[data-inc]').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+function generatePressMessage(){
+  const severity = document.getElementById('pressSeverity').value;
+  const summary = document.getElementById('pressSummary').value.trim() || 'incident en cours de vérification';
+  const severityLabel = {LOW:'faible',MEDIUM:'moyenne',HIGH:'élevée',CRITICAL:'critique'}[severity];
+  const msg = 'Alerte SafeStade — Type : ' + currentIncidentType + ' (gravité ' + severityLabel + ').\n\n'
+    + 'Résumé : ' + summary + '.\n\n'
+    + 'Merci de vérifier cette information et de nous contacter pour toute clarification. Ceci est une communication émise depuis la plateforme SafeStade.';
+  document.getElementById('pressGeneratedMsg').value = msg;
+  document.getElementById('waMessage').value = msg;
+  document.getElementById('mailBody').value = msg;
+  document.getElementById('mailSubject').value = 'Alerte SafeStade — ' + currentIncidentType;
+  document.getElementById('pressStatusBadge').textContent = 'BROUILLON';
+  document.getElementById('pressStatusBadge').className = 'sim-badge pending';
+  toast('Message généré — relis-le avant d\'approuver');
+}
+function approvePressMessage(){
+  const msg = document.getElementById('pressGeneratedMsg').value;
+  if(!msg.trim() || msg.includes('apparaîtra ici')){ toast('Génère d\'abord un message'); return; }
+  document.getElementById('waMessage').value = msg;
+  document.getElementById('mailBody').value = msg;
+  document.getElementById('pressStatusBadge').textContent = 'APPROUVÉ';
+  document.getElementById('pressStatusBadge').className = 'sim-badge on';
+  logAudit('Message presse approuvé : ' + currentIncidentType);
+  syncToAbaFusion('press_message_approved', { type: currentIncidentType, message: msg });
+  toast('Message approuvé — utilise WhatsApp/Email ci-dessous pour l\'envoyer');
+}
+function openPressChannel(url){
+  window.open(url, '_blank');
+  logAudit('Canal presse ouvert : ' + url);
+}
 function sendWhatsApp(){
   const num = document.getElementById('waNumber').value.replace(/[^0-9]/g,'');
   const msg = document.getElementById('waMessage').value;
   if(!num){ toast('Renseigne un numéro WhatsApp'); return; }
   const url = 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg);
-  window.open(url, '_blank');
-  toast('Ouverture de WhatsApp…');
+  const win = window.open(url, '_blank');
+  if(!win || win.closed || typeof win.closed === 'undefined'){
+    // Popup bloqué par le navigateur : on affiche un vrai lien cliquable à la place
+    toast('Fenêtre bloquée — clique sur le lien affiché ci-dessous', 5000);
+    const box = document.getElementById('waFallback');
+    box.innerHTML = '<a href="'+url+'" target="_blank" style="color:var(--green-light);font-weight:700">👉 Ouvrir WhatsApp manuellement</a>';
+  } else {
+    toast('Ouverture de WhatsApp…');
+  }
   logAudit('WhatsApp ouvert vers ' + num);
   syncToAbaFusion('whatsapp_sent', { number: num, message: msg });
 }
@@ -973,11 +1317,20 @@ function sendEmail(){
   const subject = document.getElementById('mailSubject').value;
   const body = document.getElementById('mailBody').value;
   if(!to){ toast('Renseigne un destinataire'); return; }
-  const url = 'mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-  window.location.href = url;
-  toast('Ouverture de ton client mail…');
-  logAudit('Email préparé vers ' + to);
+  // Gmail web direct : marche même sans client mail installé sur l'ordinateur (contrairement à mailto:)
+  const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(to)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  window.open(gmailUrl, '_blank');
+  toast('Ouverture de Gmail (brouillon prêt à envoyer)…');
+  logAudit('Email préparé (Gmail web) vers ' + to);
   syncToAbaFusion('email_sent', { to, subject, body });
+}
+function sendEmailViaMailto(){
+  const to = document.getElementById('mailTo').value.trim();
+  const subject = document.getElementById('mailSubject').value;
+  const body = document.getElementById('mailBody').value;
+  if(!to){ toast('Renseigne un destinataire'); return; }
+  window.location.href = 'mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  toast('Ouverture de ton client mail installé…');
 }
 
 /* ---------- AUDIT (journal réel des actions, persisté) ---------- */
@@ -997,8 +1350,17 @@ function renderAudit(){
     '<div class="audit-item'+(a.warn?' warn':'')+'"><div class="ai-dot"></div><div class="ai-text"><div class="ai-action">'+a.action+'</div><div class="ai-time">'+a.time+'</div></div></div>'
   ).join('') : '<div class="empty-note">Aucune action enregistrée pour l\'instant — utilise les Outils pour générer de l\'activité réelle.</div>';
   const socEsp = document.getElementById('socEspStatus'); if(socEsp) socEsp.textContent = document.getElementById('dashEspStatus').textContent;
-  const socLed = document.getElementById('socEspLed'); if(socLed) socLed.className = document.getElementById('espLed').className;
+  const socLed = document.getElementById('socEspLed'); const ledEl = document.getElementById('ledState'); if(socLed && ledEl) socLed.className = 'led-dot ' + (ledEl.className.includes('red') ? 'red' : ledEl.className.includes('green') ? 'green' : '');
   const socWh = document.getElementById('socWebhookStatus'); if(socWh) socWh.textContent = document.getElementById('dashWebhookStatus').textContent;
+  renderEspTrace();
+}
+function renderEspTrace(){
+  const box = document.getElementById('espTraceLog');
+  if(!box) return;
+  const list = loadAudit().filter(a => a.action.startsWith('ESP32') || a.action.includes('BTN1') || a.action.includes('Minuterie') || a.action.includes('IR'));
+  box.innerHTML = list.length ? list.slice(0,15).map(a=>
+    '<div class="audit-row"><span class="a-cmd">ADMIN · ESP32-01 · '+a.action.replace('ESP32 (USB) : ','')+'</span><span class="a-time">'+a.time+'</span></div>'
+  ).join('') : '<div class="empty-note">Aucune commande envoyée pour l\'instant.</div>';
 }
 
 /* ---------- SECURITE (toggles réels, persistés) ---------- */
@@ -1120,7 +1482,7 @@ function stopTicketScan(){
   document.getElementById('scanTicketBadge').className='sim-badge pending';
 }
 function checkTicketCode(code){
-  code = (code||'').trim();
+  code = (code||'').trim().toUpperCase();
   if(!code) return;
   const resultBox = document.getElementById('ticketScanResult');
   const used = loadUsedTickets();
@@ -1150,13 +1512,53 @@ document.addEventListener('DOMContentLoaded', function(){
   renderSecurity();
   renderTickets();
   renderAudit();
+  renderBlockchain();
 });
 
 /* ---------- Synchronisation générique vers AbaFusion (ESP32/USB en priorité) ---------- */
+/* ---------- Description lisible pour chaque type d'événement envoyé à AbaFusion ---------- */
+function buildAbaFusionDescription(eventType, data){
+  switch(eventType){
+    case 'esp32_command': return 'Commande ESP32 envoyée : ' + data.command;
+    case 'whatsapp_sent': return 'Message WhatsApp envoyé au ' + data.number;
+    case 'email_sent': return 'Email envoyé à ' + data.to + ' — sujet : ' + data.subject;
+    case 'ticket_created': return 'Nouveau ticket créé : ' + data.title + ' (priorité ' + data.priority + ')';
+    case 'ticket_scan_valid': return 'Billet ' + data.code + ' validé et marqué utilisé';
+    case 'ticket_scan_invalid': return 'Billet ' + data.code + ' invalide';
+    case 'ticket_scan_reused': return 'Billet ' + data.code + ' déjà utilisé';
+    case 'document_hashed': return 'Empreinte SHA-256 générée pour un document (' + data.length + ' caractères)';
+    case 'document_encrypted': return 'Document chiffré (AES-256)';
+    case 'document_secured': return 'Document sécurisé (hash et/ou chiffré) envoyé';
+    case 'press_message_approved': return 'Message presse approuvé — type : ' + data.type;
+    case 'proof_block_added': return 'Preuve ajoutée à la chaîne — bloc n°' + data.index + ' : ' + data.desc;
+    case 'pv_signalement': return 'PV de signalement généré — type : ' + data.type;
+    case 'ir_auto_alarm': return 'Détection infrarouge automatique — alarme déclenchée';
+    case 'door_not_closed_15min': return data.description || 'Porte non refermée 15 minutes après l\'alerte';
+    case 'minuterie_expiree': return data.description;
+    case 'alerte_incendie': return data.description;
+    case 'porte_etat': return data.description;
+    default: return data && data.message ? data.message : ('Événement : ' + eventType);
+  }
+}
+function extractTicketNumber(data){
+  if(!data) return null;
+  return data.id || data.code || null;
+}
 async function syncToAbaFusion(eventType, data){
   // L'ESP32 n'a aucun Wi-Fi : c'est toujours le téléphone (sa propre connexion
   // internet) qui envoie réellement à AbaFusion, via le webhook/proxy ci-dessous.
-  const payload = { event: eventType, source: 'safestade-pro', data, timestamp: new Date().toISOString() };
+  const now = new Date();
+  const payload = {
+    stade: 'Stade de Rabat',
+    heure: now.toLocaleTimeString('fr-FR'),
+    date: now.toLocaleDateString('fr-FR'),
+    numTicket: extractTicketNumber(data),
+    description: buildAbaFusionDescription(eventType, data),
+    event: eventType,
+    source: 'safestade-pro',
+    data,
+    timestamp: now.toISOString()
+  };
   const url = document.getElementById('abaUrl') ? document.getElementById('abaUrl').value.trim() : '';
   const proxyUrl = document.getElementById('abaProxyUrl') ? document.getElementById('abaProxyUrl').value.trim() : '';
   if(!url) return;
@@ -1230,6 +1632,90 @@ async function decryptDoc(){
     logAudit('Document déchiffré (AES-256-GCM)');
   }catch(err){ toast('Échec du déchiffrement — mot de passe incorrect ou données corrompues', 5000); }
 }
+/* ---------- DROIT & PREUVES : chaîne de blocs SHA-256 réelle (façon blockchain) ---------- */
+function loadChain(){ try{ return JSON.parse(localStorage.getItem('ss_proof_chain')||'[]'); }catch(e){ return []; } }
+function saveChain(chain){ localStorage.setItem('ss_proof_chain', JSON.stringify(chain)); }
+let lastProofBlock = null;
+let lastPV = null;
+async function generateProofBlock(){
+  const desc = document.getElementById('proofDesc').value.trim();
+  if(!desc){ toast('Décris la preuve avant de générer l\'empreinte'); return; }
+  const chain = loadChain();
+  const prevHash = chain.length ? chain[chain.length-1].hash : '0'.repeat(64);
+  const timestamp = new Date().toISOString();
+  const blockContent = prevHash + '|' + desc + '|' + timestamp;
+  const hash = await sha256Hex(blockContent);
+  const block = { index: chain.length, desc, timestamp, prevHash, hash };
+  chain.push(block);
+  saveChain(chain);
+  document.getElementById('chainBadge').textContent = 'Bloc n°' + block.index;
+  const box = document.getElementById('proofResult');
+  box.style.display = 'flex';
+  box.innerHTML = '<span style="font-size:10px;color:var(--ink-soft)">Hash du bloc n°'+block.index+'</span><span style="font-family:monospace;font-size:10.5px;word-break:break-all">'+hash+'</span>';
+  document.getElementById('proofDesc').value = '';
+  lastProofBlock = block;
+  logAudit('Preuve ajoutée à la chaîne (bloc n°' + block.index + ')');
+  toast('Preuve ajoutée à la chaîne — bloc n°' + block.index + '. Clique "Envoyer à AbaFusion" pour la transmettre.');
+  renderBlockchain();
+}
+async function sendLastProofToAbaFusion(){
+  if(!lastProofBlock){ toast('Génère d\'abord un bloc de preuve'); return; }
+  await syncToAbaFusion('proof_block_added', lastProofBlock);
+  toast('Bloc n°' + lastProofBlock.index + ' envoyé à AbaFusion');
+}
+async function verifyProofIntegrity(){
+  const text = document.getElementById('verifyText').value;
+  const expected = document.getElementById('verifyHash').value.trim().toLowerCase();
+  const resultBox = document.getElementById('verifyResult');
+  if(!text || !expected){ toast('Renseigne le texte et le hash attendu'); return; }
+  const actual = await sha256Hex(text);
+  if(actual === expected){
+    resultBox.className = 'scan-result valid';
+    resultBox.innerHTML = '<div class="sr-label">✅ Intégrité confirmée</div><div class="sr-meta">Le hash correspond exactement — le texte n\'a pas été modifié.</div>';
+  } else {
+    resultBox.className = 'scan-result invalid';
+    resultBox.innerHTML = '<div class="sr-label">❌ Intégrité compromise</div><div class="sr-meta">Le hash calculé ('+actual.slice(0,16)+'…) ne correspond pas — le texte a été modifié ou le hash attendu est incorrect.</div>';
+  }
+}
+async function generatePV(){
+  const type = document.getElementById('pvType').value;
+  const facts = document.getElementById('pvFacts').value.trim();
+  const resultBox = document.getElementById('pvResult');
+  if(!facts){ toast('Décris les faits avant de générer le PV'); return; }
+  resultBox.className = 'scan-result valid';
+  resultBox.innerHTML = '<div class="sr-label">⏳ Vérification biométrique requise…</div>';
+  try{
+    await verifyFingerprintSilent();
+  }catch(err){
+    resultBox.className = 'scan-result invalid';
+    resultBox.innerHTML = '<div class="sr-label">❌ PV non généré</div><div class="sr-meta">Vérification biométrique échouée : '+err.message+'</div>';
+    toast('Empreinte requise pour générer le PV', 4500);
+    return;
+  }
+  const now = new Date().toLocaleString('fr-FR');
+  const pvText = 'PROCÈS-VERBAL DE SIGNALEMENT\nDate : '+now+'\nType d\'infraction : '+type+'\nFaits constatés : '+facts+'\nAuthentifié par vérification biométrique (WebAuthn) sur cet appareil.';
+  const hash = await sha256Hex(pvText);
+  resultBox.className = 'scan-result valid';
+  resultBox.innerHTML = '<div class="sr-label">✅ PV généré et authentifié</div><div class="sr-meta">'+pvText.replace(/\n/g,'<br>')+'<br><br>Empreinte du document : '+hash.slice(0,24)+'…</div>';
+  lastPV = { type, facts, hash, timestamp: now };
+  logAudit('PV de signalement généré : ' + type, true);
+  toast('PV généré. Clique "Envoyer à AbaFusion" pour le transmettre.');
+}
+async function sendLastPVToAbaFusion(){
+  if(!lastPV){ toast('Génère d\'abord un PV'); return; }
+  await syncToAbaFusion('pv_signalement', lastPV);
+  toast('PV envoyé à AbaFusion');
+}
+function renderBlockchain(){
+  const box = document.getElementById('blockchainLedger');
+  if(!box) return;
+  const chain = loadChain();
+  box.innerHTML = chain.length ? chain.slice().reverse().map(b=>
+    '<div class="audit-row" style="flex-direction:column;align-items:flex-start;gap:3px"><span class="a-cmd">Bloc n°'+b.index+' — '+b.desc+'</span>'
+    + '<span class="a-time">Hash : '+b.hash.slice(0,20)+'… · Précédent : '+b.prevHash.slice(0,12)+'… · '+new Date(b.timestamp).toLocaleString('fr-FR')+'</span></div>'
+  ).join('') : '<div class="empty-note">Aucun bloc pour l\'instant — génère une preuve dans l\'onglet Droit & Preuves.</div>';
+}
+
 async function sendSecuredDocToAbaFusion(){
   const hash = document.getElementById('cryptoHashResult').textContent;
   const cipher = document.getElementById('cryptoCipherResult').value;
